@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flood-It Game</title>
     <style>
-        /* --- Styles (Mostly Unchanged, Confetti Styles Removed) --- */
+        /* --- Styles --- */
         body {
             font-family: 'Arial', sans-serif;
             display: flex;
@@ -14,7 +14,7 @@
             background-color: #f0f0f0;
             margin: 0;
             padding: 20px;
-            overflow: hidden; /* Prevent scrollbars during confetti */
+            /* overflow: hidden; removed */
         }
 
         h1 {
@@ -204,7 +204,6 @@
         <div class="game-board" id="game-board"></div>
 
         <div class="controls">
-            <!-- ... (Control elements remain unchanged) ... -->
             <div class="control-group">
                 <label for="colors">Number of Colors:</label>
                 <select id="colors">
@@ -257,7 +256,6 @@
 
     <div class="modal" id="help-modal">
         <div class="modal-content">
-            <!-- ... (Help modal content remains unchanged) ... -->
             <h2>How to Play Flood-It</h2>
 
             <div class="rules-section">
@@ -507,68 +505,77 @@
         }
 
       // Check game status (Win/Lose)
-      function checkGameStatus() {
-          const firstCell = gameState.board[0][0];
-          let targetColor = firstCell.isObstacle ? null : firstCell.color;
+        function checkGameStatus() {
+            const firstCell = gameState.board[0][0];
+            let targetColor = firstCell.isObstacle ? null : firstCell.color;
 
-          if (targetColor === null) {
-              //If first cell is obstacle
-              outerLoop:
-              for (let r = 0; r < gameState.size; r++) {
-                  for (let c = 0; c < gameState.size; c++) {
-                      if (!gameState.board[r][c].isObstacle) {
-                          targetColor = gameState.board[r][c].color;
-                          break outerLoop;
-                      }
-                  }
-              }
-          }
-          if (targetColor === null) return;
+            if (targetColor === null) {
+                //If first cell is obstacle
+                outerLoop:
+                for (let r = 0; r < gameState.size; r++) {
+                    for (let c = 0; c < gameState.size; c++) {
+                        if (!gameState.board[r][c].isObstacle) {
+                            targetColor = gameState.board[r][c].color;
+                            break outerLoop;
+                        }
+                    }
+                }
+            }
+            if (targetColor === null) return;
 
-          for (let row = 0; row < gameState.size; row++) {
-              for (let col = 0; col < gameState.size; col++) {
-                  const cell = gameState.board[row][col];
-                  if (!cell.isObstacle && cell.color !== targetColor) {
-                      if (!gameState.infiniteMoves && gameState.moves >= gameState.maxMoves) {
-                          setTimeout(() => { loseModal.style.display = 'flex'; }, 500);
-                      }
-                      return;
-                  }
-              }
-          }
+            for (let row = 0; row < gameState.size; row++) {
+                for (let col = 0; col < gameState.size; col++) {
+                    const cell = gameState.board[row][col];
+                    if (!cell.isObstacle && cell.color !== targetColor) {
+                        if (!gameState.infiniteMoves && gameState.moves >= gameState.maxMoves) {
+                            setTimeout(() => { loseModal.style.display = 'flex'; }, 500);
+                        }
+                        return;
+                    }
+                }
+            }
 
-          finalMovesDisplay.textContent = gameState.moves;
-          setTimeout(() => {
-              winModal.style.display = 'flex';
+            finalMovesDisplay.textContent = gameState.moves;
 
-              // --- Spectacular Confetti Effect ---
+            setTimeout(() => {
+                winModal.style.display = 'flex';
 
-              // Function to create a confetti burst
-              function confettiBurst(originX, angle) {
-                  confetti({
-                      particleCount: 200, // More particles for a bigger burst
-                      spread: 50,      // Tighter spread for a focused stream
-                      angle: angle,       // Direction of the burst
-                      origin: { x: originX, y: 1 }, // Bottom-left or bottom-right
-                      startVelocity: 60, // Higher initial velocity
-                      gravity: 0.8,     // Slightly lower gravity for longer hang time
-                      ticks: 300,    // Controls how long,  default is 200.
-                      scalar: 1.2       // Makes confetti slightly bigger
-                  });
-              }
+                // --- Spectacular Confetti Effect (Improved) ---
 
-              // Left-to-right burst
-              confettiBurst(0, 45);  // Origin: bottom-left (x=0), Angle: 45 degrees
+                // Temporarily hide overflow to prevent scrollbars during confetti
+                document.body.style.overflow = 'hidden';
 
-              // Right-to-left burst
-              confettiBurst(1, 135); // Origin: bottom-right (x=1), Angle: 135 degrees
+                // Function to create a confetti burst (No Changes here)
+                function confettiBurst(originX, angle) {
+                    confetti({
+                        particleCount: 200,
+                        spread: 50,
+                        angle: angle,
+                        origin: { x: originX, y: 1 },
+                        startVelocity: 60,
+                        gravity: 0.8,
+                        ticks: 300,
+                        scalar: 1.2
+                    });
+                }
 
-              // Additional smaller bursts for more fullness (optional)
-              confettiBurst(0, 60);
-              confettiBurst(1, 120);
+                // Left-to-right burst
+                confettiBurst(0, 45);
 
-          }, 500);
-      }
+                // Right-to-left burst
+                confettiBurst(1, 135);
+
+                // Additional smaller bursts (optional)
+                confettiBurst(0, 60);
+                confettiBurst(1, 120);
+
+                // Restore overflow after confetti is done (adjust timeout as needed)
+                setTimeout(() => {
+                  document.body.style.overflow = ''; // Or 'auto' if you prefer
+                }, 1000);  // 1 second delay (should be enough)
+
+            }, 500);
+        }
 
 
         // Apply grid shapes
