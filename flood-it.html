@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flood-It Game</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .game-board {
+            display: grid;
+            gap: 2px;
+            margin-bottom: 20px;
+            border: 2px solid #333;
+        }
+        
+        .cell {
+            width: 30px;
+            height: 30px;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .cell.obstacle {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><rect width="30" height="30" fill="black"/><text x="10" y="20" fill="white" font-size="15">X</text></svg>');
+            cursor: not-allowed;
+        }
+        
+        .cell.special {
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 30 30"><text x="10" y="20" fill="black" font-size="15">★</text></svg>');
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .control-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        select, input {
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .color-palette {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.1);
+            border-color: #333;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        .help-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #2196F3;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .help-button:hover {
+            background-color: #0b7dda;
+        }
+        
+        .rules-section {
+            text-align: left;
+            margin-bottom: 15px;
+        }
+        
+        .rules-section h3 {
+            margin-bottom: 5px;
+            color: #2196F3;
+        }
+        
+        .rules-section ul {
+            padding-left: 20px;
+        }
+        
+        .invalid-move {
+            animation: shake 0.5s;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .infinite-moves {
+            color: #FF5252;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flood-It Game</h1>
+    
+    <div class="game-container">
+        <div class="game-info">
+            <div>Moves: <span id="moves">0</span>/<span id="max-moves">25</span> <span id="infinite-indicator" class="infinite-moves" style="display: none;">(∞)</span></div>
+            <div>Grid: <span id="grid-size-display">10x10</span></div>
+        </div>
+        
+        <div class="game-board" id="game-board"></div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="colors">Number of Colors:</label>
+                <select id="colors">
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                    <option value="6" selected>6</option>
+                    <option value="8">8</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="grid-size">Grid Size:</label>
+                <select id="grid-size">
+                    <option value="6">6x6</option>
+                    <option value="8">8x8</option>
+                    <option value="10" selected>10x10</option>
+                    <option value="14">14x14</option>
+                    <option value="20">20x20</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="grid-shape">Board Shape:</label>
+                <select id="grid-shape">
+                    <option value="square" selected>Square</option>
+                    <option value="hexagon">Hexagon</option>
+                    <option value="triangle">Triangle</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label for="obstacles">Obstacles:</label>
+                <input type="checkbox" id="obstacles">
+                
+                <label for="special-cells">Special Cells:</label>
+                <input type="checkbox" id="special-cells">
+                
+                <label for="infinite-moves">Infinite Moves:</label>
+                <input type="checkbox" id="infinite-moves">
+            </div>
+            
+            <div class="button-group">
+                <button id="new-game-btn">New Game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="help-button" id="help-button">?</div>
+    
+    <div class="modal" id="help-modal">
+        <div class="modal-content">
+            <h2>How to Play Flood-It</h2>
+            
+            <div class="rules-section">
+                <h3>Game Objective</h3>
+                <p>Fill the entire board with a single color in as few moves as possible.</p>
+            </div>
+            
+            <div class="rules-section">
+                <h3>How to Play</h3>
+                <ul>
+                    <li>You start from the top-left cell of the board.</li>
+                    <li>Click on any cell to change the color of your flooded area to that color.</li>
+                    <li>When you change color, all adjacent cells of the same color will join your flooded area.</li>
+                    <li>Continue making moves until the entire board is a single color.</li>
+                    <li>Try to complete the game within the move limit shown at the top.</li>
+                    <li>Invalid moves (selecting the current flood color) don't count against your move limit.</li>
+                </ul>
+            </div>
+            
+            <div class="rules-section">
+                <h3>Game Options</h3>
+                <ul>
+                    <li><strong>Number of Colors:</strong> Choose how many different colors appear on the board.</li>
+                    <li><strong>Grid Size:</strong> Select the dimensions of the game board.</li>
+                    <li><strong>Board Shape:</strong> Change the overall shape of the board and its cells:
+                        <ul>
+                            <li>Square: Traditional square grid</li>
+                            <li>Hexagon: Hexagonal cells arranged in a honeycomb pattern</li>
+                            <li>Triangle: Triangular cells arranged in a grid</li>
+                        </ul>
+                    </li>
+                    <li><strong>Obstacles:</strong> Add black cells that cannot be flooded and must be worked around.</li>
+                    <li><strong>Special Cells:</strong> Add star-marked cells with special properties.</li>
+                    <li><strong>Infinite Moves:</strong> Toggle to play without a move limit for a more relaxed game.</li>
+                </ul>
+            </div>
+            
+            <div class="rules-section">
+                <h3>Strategy Tips</h3>
+                <ul>
+                    <li>Look for colors that will connect large sections of the board.</li>
+                    <li>Try to plan several moves ahead.</li>
+                    <li>Sometimes it's better to make a move that doesn't immediately capture many cells but sets up a better position later.</li>
+                    <li>With obstacles, you may need to flood around them to reach isolated areas.</li>
+                </ul>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="close-help-btn">Close</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="win-modal">
+        <div class="modal-content">
+            <h2>Congratulations!</h2>
+            <p>You've completed the game in <span id="final-moves">0</span> moves!</p>
+            <div class="modal-buttons">
+                <button id="new-game-modal-btn">New Game</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="lose-modal">
+        <div class="modal-content">
+            <h2>Game Over</h2>
+            <p>You've run out of moves!</p>
+            <div class="modal-buttons">
+                <button id="try-again-btn">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            board: [],
+            size: 10,
+            colors: 6,
+            shape: 'square',
+            hasObstacles: false,
+            hasSpecialCells: false,
+            infiniteMoves: false,
+            moves: 0,
+            maxMoves: 25,
+            floodedCells: new Set(),
+            colorPalette: [
+                '#FF5252', // Red
+                '#4CAF50', // Green
+                '#2196F3', // Blue
+                '#FFEB3B', // Yellow
+                '#9C27B0', // Purple
+                '#FF9800', // Orange
+                '#00BCD4', // Cyan
+                '#795548'  // Brown
+            ]
+        };
+
+        // DOM Elements
+        const gameBoard = document.getElementById('game-board');
+        const movesDisplay = document.getElementById('moves');
+        const maxMovesDisplay = document.getElementById('max-moves');
+        const infiniteIndicator = document.getElementById('infinite-indicator');
+        const gridSizeDisplay = document.getElementById('grid-size-display');
+        const colorsSelect = document.getElementById('colors');
+        const gridSizeSelect = document.getElementById('grid-size');
+        const gridShapeSelect = document.getElementById('grid-shape');
+        const obstaclesCheckbox = document.getElementById('obstacles');
+        const specialCellsCheckbox = document.getElementById('special-cells');
+        const infiniteMovesCheckbox = document.getElementById('infinite-moves');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const helpButton = document.getElementById('help-button');
+        const helpModal = document.getElementById('help-modal');
+        const closeHelpBtn = document.getElementById('close-help-btn');
+        const winModal = document.getElementById('win-modal');
+        const loseModal = document.getElementById('lose-modal');
+        const finalMovesDisplay = document.getElementById('final-moves');
+        const newGameModalBtn = document.getElementById('new-game-modal-btn');
+        const tryAgainBtn = document.getElementById('try-again-btn');
+
+        // Initialize the game
+        function initGame() {
+            // Reset game state
+            gameState.moves = 0;
+            gameState.floodedCells = new Set();
+            
+            // Update display
+            movesDisplay.textContent = gameState.moves;
+            maxMovesDisplay.textContent = gameState.maxMoves;
+            
+            // Show/hide infinite moves indicator
+            if (gameState.infiniteMoves) {
+                infiniteIndicator.style.display = 'inline';
+            } else {
+                infiniteIndicator.style.display = 'none';
+            }
+            
+            gridSizeDisplay.textContent = `${gameState.size}x${gameState.size}`;
+            
+            // Create the board
+            createBoard();
+            
+            // Initialize the flood from the top-left cell
+            const startCell = gameState.board[0][0];
+            if (!startCell.isObstacle) {
+                gameState.floodedCells.add('0,0');
+                floodFill(0, 0, startCell.color, startCell.color);
+                updateBoardDisplay();
+            }
+        }
+
+        // Create the game board
+        function createBoard() {
+            gameState.board = [];
+            gameBoard.innerHTML = '';
+            
+            // Set grid template based on size
+            gameBoard.style.gridTemplateColumns = `repeat(${gameState.size}, 30px)`;
+            
+            // Calculate max moves based on grid size and colors
+            gameState.maxMoves = Math.floor(gameState.size * 1.5 + gameState.colors);
+            maxMovesDisplay.textContent = gameState.maxMoves;
+            
+            // Create cells
+            for (let row = 0; row < gameState.size; row++) {
+                gameState.board[row] = [];
+                for (let col = 0; col < gameState.size; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    
+                    // Determine if cell should be an obstacle or special
+                    let isObstacle = false;
+                    let isSpecial = false;
+                    
+                    if (gameState.hasObstacles && Math.random() < 0.05 && !(row === 0 && col === 0)) {
+                        isObstacle = true;
+                        cell.classList.add('obstacle');
+                    } else if (gameState.hasSpecialCells && Math.random() < 0.05 && !(row === 0 && col === 0)) {
+                        isSpecial = true;
+                        cell.classList.add('special');
+                    }
+                    
+                    // Assign random color if not an obstacle
+                    const colorIndex = Math.floor(Math.random() * gameState.colors);
+                    const color = isObstacle ? '#000000' : gameState.colorPalette[colorIndex];
+                    
+                    cell.style.backgroundColor = color;
+                    
+                    // Add cell to board
+                    gameBoard.appendChild(cell);
+                    
+                    // Store cell data
+                    gameState.board[row][col] = {
+                        color: color,
+                        isObstacle: isObstacle,
+                        isSpecial: isSpecial
+                    };
+                    
+                    // Add click event
+                    cell.addEventListener('click', handleCellClick);
+                }
+            }
+            
+            // Apply shape modifications if needed
+            if (gameState.shape !== 'square') {
+                applyGridShape();
+            }
+        }
+
+        // Handle cell click
+        function handleCellClick(event) {
+            const cell = event.target;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+            const clickedColor = gameState.board[row][col].color;
+            
+            // Get the current flooded color
+            const currentColor = getCurrentFloodColor();
+            
+            // Only process click if the color is different from current flood color
+            if (clickedColor !== currentColor && !gameState.board[row][col].isObstacle) {
+                makeMove(clickedColor);
+            } else if (clickedColor === currentColor) {
+                // Invalid move - show feedback but don't count it
+                gameBoard.classList.add('invalid-move');
+                setTimeout(() => {
+                    gameBoard.classList.remove('invalid-move');
+                }, 500);
+            }
+        }
+
+        // Get the current flood color
+        function getCurrentFloodColor() {
+            // Find any flooded cell and return its color
+            for (const coords of gameState.floodedCells) {
+                const [row, col] = coords.split(',').map(Number);
+                return gameState.board[row][col].color;
+            }
+            return null;
+        }
+
+        // Make a move with the selected color
+        function makeMove(newColor) {
+            // Increment moves
+            gameState.moves++;
+            movesDisplay.textContent = gameState.moves;
+            
+            // Get current flood color
+            const currentColor = getCurrentFloodColor();
+            
+            // Flood fill with new color
+            const floodedCellsArray = Array.from(gameState.floodedCells);
+            for (const coords of floodedCellsArray) {
+                const [row, col] = coords.split(',').map(Number);
+                floodFill(row, col, currentColor, newColor);
+            }
+            
+            // Update the board display with animation
+            updateBoardDisplay();
+            
+            // Check win condition
+            checkGameStatus();
+        }
+
+        // Flood fill algorithm
+        function floodFill(row, col, oldColor, newColor) {
+            // Update the current cell
+            if (!gameState.board[row][col].isObstacle) {
+                gameState.board[row][col].color = newColor;
+                gameState.floodedCells.add(`${row},${col}`);
+            }
+            
+            // Check adjacent cells (4-way connectivity)
+            const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+            
+            for (const [dx, dy] of directions) {
+                const newRow = row + dx;
+                const newCol = col + dy;
+                
+                // Check if the new position is valid
+                if (
+                    newRow >= 0 && newRow < gameState.size &&
+                    newCol >= 0 && newCol < gameState.size &&
+                    gameState.board[newRow][newCol].color === oldColor &&
+                    !gameState.board[newRow][newCol].isObstacle &&
+                    !gameState.floodedCells.has(`${newRow},${newCol}`)
+                ) {
+                    floodFill(newRow, newCol, oldColor, newColor);
+                }
+            }
+        }
+
+        // Update the visual representation of the board
+        function updateBoardDisplay() {
+            const cells = document.querySelectorAll('.cell');
+            
+            cells.forEach(cell => {
+                const row = parseInt(cell.dataset.row);
+                const col = parseInt(cell.dataset.col);
+                const cellData = gameState.board[row][col];
+                
+                // Apply transition for animation
+                setTimeout(() => {
+                    cell.style.backgroundColor = cellData.color;
+                }, 50 * (row + col) / 2); // Staggered animation
+            });
+        }
+
+        // Check if the game is won or lost
+        function checkGameStatus() {
+            // Check if all non-obstacle cells are flooded
+            const totalNonObstacleCells = gameState.size * gameState.size - 
+                gameState.board.flat().filter(cell => cell.isObstacle).length;
+            
+            if (gameState.floodedCells.size === totalNonObstacleCells) {
+                // Game won
+                finalMovesDisplay.textContent = gameState.moves;
+                setTimeout(() => {
+                    winModal.style.display = 'flex';
+                }, 500);
+            } else if (!gameState.infiniteMoves && gameState.moves >= gameState.maxMoves) {
+                // Game lost (only if not in infinite moves mode)
+                setTimeout(() => {
+                    loseModal.style.display = 'flex';
+                }, 500);
+            }
+        }
+
+        // Apply different grid shapes
+        function applyGridShape() {
+            const cells = document.querySelectorAll('.cell');
+            
+            if (gameState.shape === 'hexagon') {
+                gameBoard.style.gridTemplateColumns = `repeat(${gameState.size}, 26px)`;
+                
+                cells.forEach((cell, index) => {
+                    const row = Math.floor(index / gameState.size);
+                    
+                    cell.style.clipPath = 'polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%)';
+                    cell.style.margin = '0 -3px';
+                    
+                    if (row % 2 === 1) {
+                        cell.style.transform = 'translateX(13px)';
+                    }
+                });
+            } else if (gameState.shape === 'triangle') {
+                gameBoard.style.gridTemplateColumns = `repeat(${gameState.size}, 30px)`;
+                
+                cells.forEach((cell, index) => {
+                    const row = Math.floor(index / gameState.size);
+                    const col = index % gameState.size;
+                    
+                    if ((row + col) % 2 === 0) {
+                        cell.style.clipPath = 'polygon(50% 0%, 100% 100%, 0% 100%)';
+                    } else {
+                        cell.style.clipPath = 'polygon(0% 0%, 100% 0%, 50% 100%)';
+                    }
+                });
+            }
+        }
+
+        // Event Listeners
+        newGameBtn.addEventListener('click', () => {
+            gameState.size = parseInt(gridSizeSelect.value);
+            gameState.colors = parseInt(colorsSelect.value);
+            gameState.shape = gridShapeSelect.value;
+            gameState.hasObstacles = obstaclesCheckbox.checked;
+            gameState.hasSpecialCells = specialCellsCheckbox.checked;
+            gameState.infiniteMoves = infiniteMovesCheckbox.checked;
+            
+            initGame();
+        });
+
+        newGameModalBtn.addEventListener('click', () => {
+            winModal.style.display = 'none';
+            gameState.size = parseInt(gridSizeSelect.value);
+            gameState.colors = parseInt(colorsSelect.value);
+            gameState.shape = gridShapeSelect.value;
+            gameState.hasObstacles = obstaclesCheckbox.checked;
+            gameState.hasSpecialCells = specialCellsCheckbox.checked;
+            gameState.infiniteMoves = infiniteMovesCheckbox.checked;
+            
+            initGame();
+        });
+
+        tryAgainBtn.addEventListener('click', () => {
+            loseModal.style.display = 'none';
+            initGame();
+        });
+        
+        // Help button event listeners
+        helpButton.addEventListener('click', () => {
+            helpModal.style.display = 'flex';
+        });
+        
+        closeHelpBtn.addEventListener('click', () => {
+            helpModal.style.display = 'none';
+        });
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === helpModal) {
+                helpModal.style.display = 'none';
+            }
+            if (event.target === winModal) {
+                winModal.style.display = 'none';
+            }
+            if (event.target === loseModal) {
+                loseModal.style.display = 'none';
+            }
+        });
+
+        // Initialize the game when the page loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
