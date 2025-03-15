@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lights Out!</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f8f9fa;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #343a40;
+            margin-bottom: 20px;
+        }
+
+        .game-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 20px;
+        }
+
+        .game-board {
+            display: grid;
+            gap: 2px;
+            border: 2px solid #343a40;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 40px; /* Slightly larger for better clickability */
+            height: 40px;
+            border-radius: 5px; /* Rounded corners */
+            cursor: pointer;
+            transition: background-color 0.2s ease; /* Smoother transition */
+            background-color: #f0f0f0; /* Light gray for "off" */
+            display: flex; /* Center any potential content */
+            justify-content: center;
+            align-items: center;
+        }
+
+        .cell.on {
+            background-color: #ffcc00; /*  Yellow for "on"  */
+        }
+
+
+        .controls {
+            margin-bottom: 20px;
+        }
+      .game-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+      }
+
+        /* Modal Styles - Reuse from Flooder */
+        .modal-content {
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .rules-section { /* Reuse from Flooder */
+            text-align: left;
+            margin-bottom: 15px;
+        }
+
+        .rules-section h3 {
+            margin-bottom: 5px;
+            color: #0d6efd;
+        }
+
+        .rules-section ul {
+            padding-left: 20px;
+        }
+
+        /* Optional: Animation for feedback, similar to your Flooder */
+        .cell.clicked {
+            animation: pulse 0.3s ease;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+    </style>
+</head>
+
+<body>
+    <h1>Lights Out!</h1>
+
+    <div class="game-container">
+      <div class="game-info">
+            <div>Moves: <span id="moves">0</span></div>
+            <div>Grid: <span id="grid-size-display">5x5</span></div>
+      </div>
+        <div class="game-board" id="game-board"></div>
+
+        <div class="controls">
+            <div class="mb-3 row">
+                <label for="grid-size" class="col-sm-4 col-form-label">Grid Size:</label>
+                <div class="col-sm-8">
+                    <select class="form-select" id="grid-size">
+                        <option value="3">3x3</option>
+                        <option value="4">4x4</option>
+                        <option value="5" selected>5x5</option>
+                        <option value="6">6x6</option>
+                        <option value="7">7x7</option>
+                    </select>
+                </div>
+            </div>
+            <div class="d-grid">
+                <button type="button" class="btn btn-primary" id="new-game-btn">New Game</button>
+                <button type="button" class="btn btn-secondary mt-2" id="scramble-btn">Scramble</button> <!-- Added Scramble -->
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Button -->
+    <button type="button" class="btn btn-info position-absolute top-0 end-0 m-3" id="help-button">?</button>
+
+    <!-- Help Modal (Content Updated) -->
+    <div class="modal fade" id="help-modal" tabindex="-1" aria-labelledby="helpModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="helpModalLabel">How to Play Lights Out</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                      <div class="rules-section">
+                        <h3>Game Objective</h3>
+                        <p>Turn off all the lights on the board.</p>
+                    </div>
+
+                    <div class="rules-section">
+                        <h3>How to Play</h3>
+                        <ul>
+                            <li>Clicking on a light toggles it (on to off, off to on).</li>
+                            <li>Clicking a light *also* toggles its immediate neighbors (above, below, left, and right).</li>
+                            <li>The goal is to find the sequence of clicks that turns off all the lights.</li>
+                        </ul>
+                    </div>
+
+                    <div class="rules-section">
+                      <h3>Game Options</h3>
+                      <ul>
+                        <li><strong>Grid Size:</strong> Select the dimensions of the game board.</li>
+                      </ul>
+                    </div>
+
+                    <div class="rules-section">
+                        <h3>Strategy Tips</h3>
+                        <ul>
+                            <li>There are systematic methods to solve any Lights Out puzzle, but finding them can be challenging!</li>
+                            <li>Start by experimenting with different patterns of clicks.</li>
+                            <li>Look for ways to isolate lights that are on.</li>
+                            <li>Sometimes a move that seems to make things worse can actually set up a solution.</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div class="modal fade" id="win-modal" tabindex="-1" aria-labelledby="winModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="winModalLabel">Congratulations!</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>You've solved the puzzle in <span id="final-moves"></span> moves!</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="new-game-modal-btn">New Game</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL"
+        crossorigin="anonymous"></script>
+
+    <script>
+        // --- Game State ---
+        const gameState = {
+            board: [],
+            size: 5, // Default size
+            moves: 0,
+        };
+
+        // --- DOM Elements ---
+        const gameBoard = document.getElementById('game-board');
+        const gridSizeSelect = document.getElementById('grid-size');
+        const newGameBtn = document.getElementById('new-game-btn');
+        const scrambleBtn = document.getElementById('scramble-btn'); // Added Scramble Button
+        const helpButton = document.getElementById('help-button');
+        const helpModal = document.getElementById('help-modal');
+        const winModal = document.getElementById('win-modal');
+        const movesDisplay = document.getElementById('moves');
+        const gridSizeDisplay = document.getElementById('grid-size-display');
+        const finalMovesDisplay = document.getElementById('final-moves');
+        const newGameModalBtn = document.getElementById('new-game-modal-btn');
+
+
+
+        // Bootstrap Modal Instances
+        const helpModalInstance = new bootstrap.Modal(helpModal);
+        const winModalInstance = new bootstrap.Modal(winModal);
+
+
+        // --- Game Functions ---
+
+        // Initialize the game
+        function initGame() {
+          gameState.moves = 0;
+          movesDisplay.textContent = gameState.moves;
+          createBoard();
+          scrambleBoard(); // Start with a scrambled board
+          updateBoardDisplay();
+
+        }
+
+        // Create the game board (initial state: all off)
+        function createBoard() {
+            gameState.board = [];
+            gameBoard.innerHTML = '';
+            gameBoard.style.gridTemplateColumns = `repeat(${gameState.size}, 40px)`;  // Update cell size
+            gridSizeDisplay.textContent = `${gameState.size}x${gameState.size}`;
+
+
+            for (let row = 0; row < gameState.size; row++) {
+                gameState.board[row] = [];
+                for (let col = 0; col < gameState.size; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = row;
+                    cell.dataset.col = col;
+                    // Initially, all cells are off
+                    gameState.board[row][col] = false; // false = off, true = on
+                    cell.addEventListener('click', handleCellClick);
+                    gameBoard.appendChild(cell);
+                }
+            }
+        }
+
+
+      // Handle cell click
+        function handleCellClick(event) {
+            const cell = event.target;
+            const row = parseInt(cell.dataset.row);
+            const col = parseInt(cell.dataset.col);
+
+            toggleLights(row, col);
+            gameState.moves++;
+            movesDisplay.textContent = gameState.moves;
+            updateBoardDisplay();  // Update *after* toggling
+            checkWin();
+        }
+
+        // Toggle the clicked cell and its neighbors
+        function toggleLights(row, col) {
+            const cellsToToggle = [
+                [row, col],     // The clicked cell itself
+                [row - 1, col], // Above
+                [row + 1, col], // Below
+                [row, col - 1], // Left
+                [row, col + 1]  // Right
+            ];
+
+            for (const [r, c] of cellsToToggle) {
+                if (r >= 0 && r < gameState.size && c >= 0 && c < gameState.size) {
+                    gameState.board[r][c] = !gameState.board[r][c];
+                  }
+            }
+          }
+
+          // Update the visual state of the board
+          function updateBoardDisplay() {
+              const cells = document.querySelectorAll('.cell');
+              cells.forEach(cell => {
+                  const row = parseInt(cell.dataset.row);
+                  const col = parseInt(cell.dataset.col);
+                  cell.classList.toggle('on', gameState.board[row][col]); // Add/remove 'on' class
+                  cell.classList.add('clicked');  // For animation
+                    setTimeout(() => cell.classList.remove('clicked'), 300); // Remove after animation
+                });
+          }
+
+
+
+        // Scramble the board (for new games)
+        function scrambleBoard() {
+            const scrambleMoves = gameState.size * gameState.size * 2; //  Adjust for difficulty
+            for (let i = 0; i < scrambleMoves; i++) {
+                const row = Math.floor(Math.random() * gameState.size);
+                const col = Math.floor(Math.random() * gameState.size);
+                toggleLights(row, col);
+            }
+            updateBoardDisplay();
+          gameState.moves = 0;
+          movesDisplay.textContent = gameState.moves;
+        }
+
+
+
+        // Check for win condition (all lights off)
+        function checkWin() {
+            for (let row = 0; row < gameState.size; row++) {
+                for (let col = 0; col < gameState.size; col++) {
+                    if (gameState.board[row][col]) {
+                        return; // Found a light that's still on
+                    }
+                }
+            }
+          // If we get here, all lights are off
+          finalMovesDisplay.textContent = gameState.moves;
+          setTimeout(() => { winModalInstance.show(); }, 500);
+        }
+
+        // --- Event Listeners ---
+        newGameBtn.addEventListener('click', () => {
+          gameState.size = parseInt(gridSizeSelect.value);
+          initGame();
+        });
+
+        scrambleBtn.addEventListener('click', () => {
+          scrambleBoard();
+        });
+
+        helpButton.addEventListener('click', () => {
+            helpModalInstance.show();
+        });
+        newGameModalBtn.addEventListener('click', () => {
+          winModalInstance.hide();
+          gameState.size = parseInt(gridSizeSelect.value);
+          initGame();
+        });
+
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+
+</html>
